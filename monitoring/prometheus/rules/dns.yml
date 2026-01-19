@@ -1,0 +1,53 @@
+groups:
+  - name: dns_manager
+    interval: 30s
+    rules:
+      - alert: DNSManagerDown
+        expr: up{job="dns-manager"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: dns
+        annotations:
+          summary: "DNS Manager 服务宕机"
+          description: "DNS Manager 已经宕机超过 5 分钟，自动 DNS 记录创建功能已停止工作"
+
+      - alert: DNSAPIErrorsHigh
+        expr: rate(dns_api_errors_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: dns
+        annotations:
+          summary: "DNS API 错误率过高"
+          description: "过去 10 分钟内 Cloudflare DNS API 调用失败率超过 0.1/s，可能存在 API 配额或网络问题"
+
+      - alert: NoRecordsCreated
+        expr: increase(dns_records_created_total[1h]) == 0 and dns_containers_monitored > 0
+        for: 2h
+        labels:
+          severity: warning
+          component: dns
+        annotations:
+          summary: "DNS Manager 长时间未创建记录"
+          description: "过去 2 小时内有容器被监控但未创建任何 DNS 记录，可能存在配置问题"
+
+      - alert: DNSManagerMemoryHigh
+        expr: container_memory_usage_bytes{name="dns-manager"} / container_spec_memory_limit_bytes{name="dns-manager"} > 0.8
+        for: 15m
+        labels:
+          severity: warning
+          component: dns
+        annotations:
+          summary: "DNS Manager 内存使用率过高"
+          description: "DNS Manager 内存使用率超过 80%，当前值: {{ $value | humanizePercentage }}"
+
+      - alert: DNSManagerRestarting
+        expr: rate(container_last_seen{name="dns-manager"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: dns
+        annotations:
+          summary: "DNS Manager 频繁重启"
+          description: "DNS Manager 在过去 5 分钟内频繁重启，可能存在稳定性问题"

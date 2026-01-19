@@ -1,0 +1,47 @@
+version: '3.9'
+
+# 示例应用配置
+# 演示如何添加新服务到网关
+
+networks:
+  frontend:
+    external: true
+    name: core_frontend
+
+services:
+  # 示例: Nginx 静态网站
+  example-app:
+    image: nginx:alpine
+    container_name: example-app
+    restart: unless-stopped
+    networks:
+      - frontend
+    volumes:
+      - ./html:/usr/share/nginx/html:ro
+    labels:
+      # 启用 Traefik
+      - "traefik.enable=true"
+
+      # 路由规则 - 替换为你的域名
+      - "traefik.http.routers.example.rule=Host(`example.${DOMAIN}`)"
+
+      # 入口点
+      - "traefik.http.routers.example.entrypoints=websecure"
+
+      # SSL 证书自动申请
+      - "traefik.http.routers.example.tls.certresolver=cloudflare"
+
+      # 如果需要 Keycloak 认证保护,取消下面的注释
+      # - "traefik.http.routers.example.middlewares=keycloak-auth@docker"
+
+      # 如果需要限流,取消下面的注释
+      # - "traefik.http.routers.example.middlewares=rate-limit@docker"
+
+      # 指定服务端口(如果不是默认 80)
+      - "traefik.http.services.example.loadbalancer.server.port=80"
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

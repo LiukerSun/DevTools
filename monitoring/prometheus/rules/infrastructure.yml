@@ -1,0 +1,130 @@
+# 基础设施告警规则
+
+groups:
+  - name: infrastructure
+    interval: 30s
+    rules:
+      # ==================== 服务可用性 ====================
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务 {{ $labels.job }} 不可用"
+          description: "实例 {{ $labels.instance }} 已经宕机超过 2 分钟"
+
+      # ==================== CPU 告警 ====================
+      - alert: HighCpuUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} CPU 使用率过高"
+          description: "CPU 使用率为 {{ $value | humanize }}%,持续 5 分钟以上"
+
+      - alert: CriticalCpuUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} CPU 使用率严重过高"
+          description: "CPU 使用率为 {{ $value | humanize }}%,持续 3 分钟以上"
+
+      # ==================== 内存告警 ====================
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 内存使用率过高"
+          description: "内存使用率为 {{ $value | humanize }}%,持续 5 分钟以上"
+
+      - alert: CriticalMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 95
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 内存使用率严重过高"
+          description: "内存使用率为 {{ $value | humanize }}%,持续 3 分钟以上"
+
+      # ==================== 磁盘告警 ====================
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘使用率过高"
+          description: "挂载点 {{ $labels.mountpoint }} 使用率为 {{ $value | humanize }}%"
+
+      - alert: CriticalDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘空间严重不足"
+          description: "挂载点 {{ $labels.mountpoint }} 使用率为 {{ $value | humanize }}%"
+
+      # ==================== 磁盘 I/O ====================
+      - alert: HighDiskIOLatency
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} 磁盘 I/O 延迟过高"
+          description: "磁盘 {{ $labels.device }} I/O 延迟超过 200ms"
+
+      # ==================== 容器重启 ====================
+      - alert: ContainerRestarting
+        expr: rate(kube_pod_container_status_restarts_total[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "容器 {{ $labels.container }} 频繁重启"
+          description: "容器在过去 1 小时内重启超过 3 次"
+
+      # ==================== PostgreSQL ====================
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 数据库不可用"
+          description: "PostgreSQL 实例 {{ $labels.instance }} 无法连接"
+
+      - alert: PostgreSQLTooManyConnections
+        expr: sum by (instance) (pg_stat_activity_count) > (pg_settings_max_connections * 0.8)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL 连接数过高"
+          description: "当前连接数占最大连接数的 {{ $value | humanizePercentage }}"
+
+      # ==================== Redis ====================
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 不可用"
+          description: "Redis 实例 {{ $labels.instance }} 无法连接"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis 内存使用率过高"
+          description: "Redis 内存使用率为 {{ $value | humanize }}%"

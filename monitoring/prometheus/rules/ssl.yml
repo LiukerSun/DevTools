@@ -1,0 +1,43 @@
+# SSL 证书告警规则
+
+groups:
+  - name: ssl_certificates
+    interval: 1h
+    rules:
+      # ==================== 证书过期告警 ====================
+      - alert: SSLCertificateExpiringSoon
+        expr: (traefik_tls_certs_not_after - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSL 证书即将过期"
+          description: "域名 {{ $labels.domain }} 的证书将在 {{ $value | humanize }} 天后过期"
+
+      - alert: SSLCertificateExpiryCritical
+        expr: (traefik_tls_certs_not_after - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL 证书即将过期(紧急)"
+          description: "域名 {{ $labels.domain }} 的证书将在 {{ $value | humanize }} 天后过期,请立即处理"
+
+      - alert: SSLCertificateRenewalFailed
+        expr: increase(traefik_tls_certs_renewal_failures_total[1h]) > 0
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "SSL 证书续期失败"
+          description: "域名 {{ $labels.domain }} 的证书续期失败,失败次数: {{ $value }}"
+
+      # ==================== ACME 告警 ====================
+      - alert: ACMEChallengeFailure
+        expr: increase(traefik_tls_certs_acme_challenge_failures_total[1h]) > 3
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "ACME Challenge 失败"
+          description: "过去 1 小时内 ACME Challenge 失败 {{ $value }} 次"

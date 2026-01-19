@@ -1,0 +1,98 @@
+version: '3.9'
+
+networks:
+  frontend:
+    external: true
+    name: core_frontend
+
+volumes:
+  jenkins_home:
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    restart: unless-stopped
+    networks:
+      - frontend
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      # 首次启动会运行初始化向导，创建管理员账号
+      # 初始密码在容器日志中：docker logs jenkins
+      # 或查看：docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+      - JAVA_OPTS=-Dhudson.model.DirectoryBrowserSupport.CSP="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+
+    labels:
+      # ==========================================
+      # 1. 启用 Traefik
+      # ==========================================
+      - "traefik.enable=true"
+
+      # ==========================================
+      # 2. 域名路由规则
+      # DNS Manager 会自动从这里提取 jenkins 子域名
+      # 并在 Cloudflare 创建: jenkins.${DOMAIN} -> 服务器IP
+      # ==========================================
+      - "traefik.http.routers.jenkins.rule=Host(`jenkins.${DOMAIN}`)"
+
+      # ==========================================
+      # 3. HTTPS 入口点
+      # ==========================================
+      - "traefik.http.routers.jenkins.entrypoints=websecure"
+
+      # ==========================================
+      # 4. SSL 证书自动申请（Cloudflare DNS 验证）
+      # Traefik 会自动通过 Cloudflare DNS-01 验证申请证书
+      # 证书自动续期，无需手动操作
+      # ==========================================
+      - "traefik.http.routers.jenkins.tls.certresolver=cloudflare"
+
+      # ==========================================
+      # 5. 限流保护（推荐）
+      # 防止暴力破解登录
+      # ==========================================
+      - "traefik.http.middlewares.jenkins-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.jenkins-ratelimit.ratelimit.burst=50"
+      - "traefik.http.routers.jenkins.middlewares=jenkins-ratelimit"
+
+      # ==========================================
+      # 6. 统一身份认证（可选）
+      # 如需启用 Keycloak SSO，将下面一行取消注释，并修改上面的 middlewares 为：
+      # - "traefik.http.routers.jenkins.middlewares=jenkins-ratelimit,keycloak-auth@docker"
+      # ==========================================
+      # - "traefik.http.routers.jenkins.middlewares=jenkins-ratelimit,keycloak-auth@docker"
+
+      # ==========================================
+      # 7. HTTP 到 HTTPS 重定向
+      # Traefik 已在全局入口点配置自动重定向，无需手动配置
+      # ==========================================
+
+      # ==========================================
+      # 8. 指定服务端口
+      # Jenkins 默认运行在 8080 端口
+      # ==========================================
+      - "traefik.http.services.jenkins.loadbalancer.server.port=8080"
+
+    # ==========================================
+    # 健康检查
+    # ==========================================
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+    # ==========================================
+    # 资源限制（可选，防止占用过多资源）
+    # ==========================================
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G

@@ -1,0 +1,80 @@
+# 应用层告警规则
+
+groups:
+  - name: applications
+    interval: 30s
+    rules:
+      # ==================== Traefik ====================
+      - alert: TraefikHighResponseTime
+        expr: histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[5m])) by (service, le)) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Traefik 服务 {{ $labels.service }} 响应时间过长"
+          description: "P95 响应时间为 {{ $value | humanizeDuration }}"
+
+      - alert: TraefikHighErrorRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) by (service) / sum(rate(traefik_service_requests_total[5m])) by (service) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Traefik 服务 {{ $labels.service }} 错误率过高"
+          description: "5xx 错误率为 {{ $value | humanize }}%"
+
+      - alert: TraefikCriticalErrorRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) by (service) / sum(rate(traefik_service_requests_total[5m])) by (service) * 100 > 20
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Traefik 服务 {{ $labels.service }} 严重故障"
+          description: "5xx 错误率为 {{ $value | humanize }}%,超过 20%"
+
+      - alert: TraefikBackendDown
+        expr: traefik_service_server_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Traefik 后端服务不可用"
+          description: "服务 {{ $labels.service }} 的后端 {{ $labels.url }} 已宕机"
+
+      # ==================== Keycloak ====================
+      - alert: KeycloakHighLoginFailureRate
+        expr: rate(keycloak_login_failures_total[5m]) / rate(keycloak_logins_total[5m]) * 100 > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Keycloak 登录失败率过高"
+          description: "登录失败率为 {{ $value | humanize }}%"
+
+      - alert: KeycloakHighActiveSessions
+        expr: keycloak_active_sessions > 1000
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Keycloak 活跃会话数较高"
+          description: "当前活跃会话数为 {{ $value }}"
+
+      # ==================== 通用应用告警 ====================
+      - alert: HighRequestRate
+        expr: sum(rate(traefik_service_requests_total[1m])) by (service) > 1000
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "服务 {{ $labels.service }} 请求量激增"
+          description: "每秒请求数为 {{ $value | humanize }}"
+
+      - alert: NoTrafficReceived
+        expr: sum(rate(traefik_service_requests_total[5m])) by (service) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "服务 {{ $labels.service }} 没有流量"
+          description: "过去 10 分钟内没有收到任何请求"

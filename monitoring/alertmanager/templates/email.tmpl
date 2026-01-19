@@ -1,0 +1,111 @@
+{{ define "email.html" }}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: {{ if eq .Status "firing" }}#d9534f{{ else }}#5cb85c{{ end }};
+            color: white;
+            padding: 15px;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .alert {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid {{ if eq .Status "firing" }}#d9534f{{ else }}#5cb85c{{ end }};
+        }
+        .label {
+            display: inline-block;
+            background-color: #5bc0de;
+            color: white;
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .severity-critical {
+            background-color: #d9534f;
+        }
+        .severity-warning {
+            background-color: #f0ad4e;
+        }
+        .severity-info {
+            background-color: #5bc0de;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+        a {
+            color: #337ab7;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>
+                {{ if eq .Status "firing" }}🔥 告警触发{{ else }}✅ 告警恢复{{ end }}
+            </h2>
+        </div>
+        <div class="content">
+            <p><strong>告警状态:</strong> {{ .Status | toUpper }}</p>
+            <p><strong>告警数量:</strong> {{ len .Alerts }}</p>
+            <p><strong>触发时间:</strong> {{ .CommonAnnotations.startsAt }}</p>
+
+            {{ range .Alerts }}
+            <div class="alert">
+                <h3>{{ .Labels.alertname }}</h3>
+                <p><strong>严重级别:</strong>
+                    <span class="label severity-{{ .Labels.severity }}">{{ .Labels.severity | toUpper }}</span>
+                </p>
+
+                <p><strong>概述:</strong> {{ .Annotations.summary }}</p>
+                <p><strong>详情:</strong> {{ .Annotations.description }}</p>
+
+                <p><strong>标签:</strong></p>
+                <div>
+                    {{ range .Labels.SortedPairs }}
+                    <span class="label">{{ .Name }}={{ .Value }}</span>
+                    {{ end }}
+                </div>
+
+                <p><strong>开始时间:</strong> {{ .StartsAt.Format "2006-01-02 15:04:05" }}</p>
+                {{ if ne .Status "firing" }}
+                <p><strong>恢复时间:</strong> {{ .EndsAt.Format "2006-01-02 15:04:05" }}</p>
+                {{ end }}
+            </div>
+            {{ end }}
+
+            <div class="footer">
+                <p>📊 查看详细监控: <a href="https://grafana.${DOMAIN}">Grafana Dashboard</a></p>
+                <p>⚙️ 查看告警管理: <a href="https://alerts.${DOMAIN}">AlertManager</a></p>
+                <p><em>此邮件由 Gateway 监控系统自动发送</em></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+{{ end }}

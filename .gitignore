@@ -1,0 +1,60 @@
+# 环境变量
+.env
+
+# 数据目录
+data/
+*.log
+
+# 备份文件
+backups/
+*.sql
+*.sql.gz
+*.dump
+*.rdb
+
+# SSL 证书
+acme.json
+*.pem
+*.crt
+*.key
+
+# IDE 和编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Docker
+.docker/
+
+# Git Worktrees
+.worktrees/
+worktrees/
+
+# 临时文件
+*.tmp
+*.temp
+tmp/
+temp/
+
+# 系统文件
+Thumbs.db
+.Trashes
+
+# Claude Code 配置
+.claude/
+
+# 开发计划文档（临时）
+docs/plans/

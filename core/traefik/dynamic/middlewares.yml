@@ -1,0 +1,61 @@
+# Traefik 动态配置 - 中间件
+
+http:
+  middlewares:
+    # Keycloak Forward Auth 中间件
+    keycloak-auth:
+      forwardAuth:
+        address: "http://keycloak:8080/realms/master/protocol/openid-connect/auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - "X-Forwarded-User"
+
+    # 限流中间件
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1s
+
+    # 登录端点严格限流
+    rate-limit-strict:
+      rateLimit:
+        average: 10
+        burst: 5
+        period: 1m
+
+    # 安全头
+    security-headers:
+      headers:
+        frameDeny: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+
+    # CORS
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - OPTIONS
+          - PUT
+          - POST
+          - DELETE
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # 压缩
+    compression:
+      compress: {}
+
+    # 重定向 www 到非 www
+    redirect-www:
+      redirectRegex:
+        regex: "^https://www\\.(.+)"
+        replacement: "https://${1}"
+        permanent: true

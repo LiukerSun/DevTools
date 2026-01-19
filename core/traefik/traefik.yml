@@ -1,0 +1,83 @@
+# Traefik 静态配置
+
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false
+
+# API 和 Dashboard
+api:
+  dashboard: true
+  insecure: false
+
+# 入口点配置
+entryPoints:
+  web:
+    address: ":80"
+    # HTTP 自动重定向到 HTTPS
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.${DOMAIN}"
+            sans:
+              - "${DOMAIN}"
+
+# 证书解析器
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: ${EMAIL}
+      storage: /acme.json
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
+        delayBeforeCheck: 10s
+
+# 服务发现 - Docker
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: core_frontend
+    watch: true
+
+  file:
+    directory: /dynamic
+    watch: true
+
+# 日志配置
+log:
+  level: INFO
+  format: json
+
+# 访问日志
+accessLog:
+  format: json
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: keep
+
+# Metrics for Prometheus
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+    entryPoint: websecure
+    manualRouting: true
+
+# Ping 健康检查
+ping:
+  entryPoint: web

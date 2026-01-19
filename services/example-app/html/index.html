@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>示例应用 - Gateway</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+
+        .status {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+
+        .info {
+            background: #f3f4f6;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .info h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .info p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .features {
+            list-style: none;
+        }
+
+        .features li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #999;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 示例应用 - Gateway</h1>
+        <div class="status">✓ 服务运行正常</div>
+
+        <div class="info">
+            <h3>欢迎使用网关 - 示例应用!</h3>
+            <p>这是一个示例应用,演示如何将服务接入到网关。</p>
+        </div>
+
+        <div class="info">
+            <h3>自动配置的功能:</h3>
+            <ul class="features">
+                <li>SSL 证书自动申请和续期</li>
+                <li>HTTPS 强制重定向</li>
+                <li>路由自动发现和注册</li>
+                <li>健康检查和故障转移</li>
+                <li>可选的 Keycloak SSO 认证</li>
+                <li>可选的限流保护</li>
+                <li>Prometheus 指标收集</li>
+                <li>Loki 日志聚合</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>添加新服务的步骤:</h3>
+            <p>
+                1. 复制此目录作为模板<br>
+                2. 修改 docker-compose.yml 中的服务名和域名<br>
+                3. 运行 <code>docker-compose up -d</code><br>
+                4. 访问你的域名,一切就绪!
+            </p>
+        </div>
+
+        <div class="footer">
+            Powered by Traefik + Docker + Keycloak + Gateway    
+        </div>
+    </div>
+</body>
+</html>
