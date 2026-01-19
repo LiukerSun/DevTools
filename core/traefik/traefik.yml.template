@@ -33,6 +33,10 @@ certificatesResolvers:
     acme:
       email: ${EMAIL}
       storage: /acme.json
+      # Staging 环境用于测试，无速率限制
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory
+      # 生产环境（测试通过后取消注释，并注释掉上面的 Staging）
+      # caServer: https://acme-v02.api.letsencrypt.org/directory
       dnsChallenge:
         provider: cloudflare
         resolvers:
