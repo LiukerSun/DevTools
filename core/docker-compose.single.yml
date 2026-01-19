@@ -58,9 +58,9 @@ services:
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=cloudflare"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      # - "traefik.http.routers.traefik-dashboard.middlewares=auth@docker"
+      - "traefik.http.routers.traefik-dashboard.middlewares=auth@docker"
       # Basic Auth for Dashboard (无 Keycloak 时使用)
-      - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/"  # admin/admin
+      - "traefik.http.middlewares.auth.basicauth.users=admin:$$2y$$05$$UmaRrbY.W9w4wxb2YrR8SOMgmgMiy9cwAxY6ESQzdiMJVuUDy4cp6/"  # admin/echo $(htpasswd -nbB admin "你的强密码")注意转译
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s
