@@ -87,6 +87,22 @@ fi
 # 加载环境变量
 source .env
 
+escape_sed_value() {
+    printf '%s' "$1" | sed -e 's/[\\/&|]/\\&/g'
+}
+
+update_env_var() {
+    local key=$1
+    local value=$2
+    if grep -q "^${key}=" .env; then
+        local escaped_value
+        escaped_value=$(escape_sed_value "$value")
+        sed -i "s|^${key}=.*|${key}=${escaped_value}|g" .env
+    else
+        echo "${key}=${value}" >> .env
+    fi
+}
+
 # 验证必要的环境变量
 if [ -z "$DOMAIN" ]; then
     echo -e "${RED}环境变量配置不完整!${NC}"
@@ -113,6 +129,31 @@ else
 fi
 
 echo -e "${GREEN}✓ 环境变量配置完整${NC}"
+
+TRAEFIK_DASHBOARD_USER=${TRAEFIK_DASHBOARD_USER:-admin}
+
+if [ -z "$TRAEFIK_DASHBOARD_PASSWORD" ]; then
+    if command -v openssl &> /dev/null; then
+        TRAEFIK_DASHBOARD_PASSWORD=$(openssl rand -base64 24)
+    else
+        TRAEFIK_DASHBOARD_PASSWORD=$(tr -dc 'A-Za-z0-9!@#$%^_-+=' </dev/urandom | head -c 24)
+    fi
+    update_env_var "TRAEFIK_DASHBOARD_PASSWORD" "$TRAEFIK_DASHBOARD_PASSWORD"
+fi
+
+if command -v htpasswd &> /dev/null; then
+    TRAEFIK_DASHBOARD_USERS=$(htpasswd -nbB "$TRAEFIK_DASHBOARD_USER" "$TRAEFIK_DASHBOARD_PASSWORD")
+elif command -v openssl &> /dev/null; then
+    TRAEFIK_DASHBOARD_USERS="${TRAEFIK_DASHBOARD_USER}:$(openssl passwd -apr1 "$TRAEFIK_DASHBOARD_PASSWORD")"
+else
+    echo -e "${RED}无法生成 Traefik Dashboard 密码哈希，请安装 htpasswd 或 openssl${NC}"
+    exit 1
+fi
+
+update_env_var "TRAEFIK_DASHBOARD_USERS" "$TRAEFIK_DASHBOARD_USERS"
+
+export TRAEFIK_DASHBOARD_PASSWORD
+export TRAEFIK_DASHBOARD_USERS
 
 # 步骤 3: 创建必要的目录
 echo -e "${YELLOW}[3/8] 创建数据目录...${NC}"
@@ -163,8 +204,10 @@ if [ -f "$TRAEFIK_TEMPLATE" ]; then
     echo "正在替换变量..."
     # 使用 sed 替换占位符
     # 使用 | 作为分隔符，防止内容中包含 / 导致报错
-    sed -i "s|\${EMAIL}|$EMAIL|g" "$TRAEFIK_CONFIG"
-    sed -i "s|\${DOMAIN}|$DOMAIN|g" "$TRAEFIK_CONFIG"
+    EMAIL_ESCAPED=$(escape_sed_value "$EMAIL")
+    DOMAIN_ESCAPED=$(escape_sed_value "$DOMAIN")
+    sed -i "s|\${EMAIL}|$EMAIL_ESCAPED|g" "$TRAEFIK_CONFIG"
+    sed -i "s|\${DOMAIN}|$DOMAIN_ESCAPED|g" "$TRAEFIK_CONFIG"
     
     echo -e "${GREEN}✓ Traefik 配置文件已生成: $TRAEFIK_CONFIG${NC}"
 else
@@ -221,16 +264,23 @@ if [ -f "$AM_TEMPLATE" ]; then
     echo "正在替换环境变量..."
     # 使用 sed 批量替换占位符
     # 使用 | 作为分隔符，防止 URL 中的 / 导致 sed 报错
-    sed -i "s|\${SMTP_HOST}|${SMTP_HOST}|g" "$AM_CONFIG"
-    sed -i "s|\${SMTP_PORT}|${SMTP_PORT}|g" "$AM_CONFIG"
-    sed -i "s|\${SMTP_USER}|${SMTP_USER}|g" "$AM_CONFIG"
-    # 注意: 密码中可能包含特殊字符，sed 可能会报错，这里假设密码相对简单
-    sed -i "s|\${SMTP_PASSWORD}|${SMTP_PASSWORD}|g" "$AM_CONFIG"
-    sed -i "s|\${ALERT_EMAIL}|${ALERT_EMAIL}|g" "$AM_CONFIG"
+    SMTP_HOST_ESCAPED=$(escape_sed_value "$SMTP_HOST")
+    SMTP_PORT_ESCAPED=$(escape_sed_value "$SMTP_PORT")
+    SMTP_USER_ESCAPED=$(escape_sed_value "$SMTP_USER")
+    SMTP_PASSWORD_ESCAPED=$(escape_sed_value "$SMTP_PASSWORD")
+    ALERT_EMAIL_ESCAPED=$(escape_sed_value "$ALERT_EMAIL")
+    DINGTALK_WEBHOOK_ESCAPED=$(escape_sed_value "$DINGTALK_WEBHOOK")
+    WECHAT_WEBHOOK_ESCAPED=$(escape_sed_value "$WECHAT_WEBHOOK")
+
+    sed -i "s|\${SMTP_HOST}|${SMTP_HOST_ESCAPED}|g" "$AM_CONFIG"
+    sed -i "s|\${SMTP_PORT}|${SMTP_PORT_ESCAPED}|g" "$AM_CONFIG"
+    sed -i "s|\${SMTP_USER}|${SMTP_USER_ESCAPED}|g" "$AM_CONFIG"
+    sed -i "s|\${SMTP_PASSWORD}|${SMTP_PASSWORD_ESCAPED}|g" "$AM_CONFIG"
+    sed -i "s|\${ALERT_EMAIL}|${ALERT_EMAIL_ESCAPED}|g" "$AM_CONFIG"
     
     # 替换 Webhook (如果未设置，可能会替换为空，AlertManager可能会报错，建议在 .env 留空值)
-    sed -i "s|\${DINGTALK_WEBHOOK}|${DINGTALK_WEBHOOK}|g" "$AM_CONFIG"
-    sed -i "s|\${WECHAT_WEBHOOK}|${WECHAT_WEBHOOK}|g" "$AM_CONFIG"
+    sed -i "s|\${DINGTALK_WEBHOOK}|${DINGTALK_WEBHOOK_ESCAPED}|g" "$AM_CONFIG"
+    sed -i "s|\${WECHAT_WEBHOOK}|${WECHAT_WEBHOOK_ESCAPED}|g" "$AM_CONFIG"
     
     echo -e "${GREEN}✓ AlertManager 配置已更新${NC}"
 fi
@@ -285,7 +335,7 @@ echo "  - Grafana:           https://grafana.${DOMAIN}"
 echo "  - Prometheus:        https://prometheus.${DOMAIN}"
 echo ""
 echo "默认凭据:"
-echo "  - Traefik Dashboard: admin / admin"
+echo "  - Traefik Dashboard: ${TRAEFIK_DASHBOARD_USER} / ${TRAEFIK_DASHBOARD_PASSWORD}"
 echo "  - Keycloak Admin:    ${KEYCLOAK_ADMIN} / ${KEYCLOAK_ADMIN_PASSWORD}"
 echo "  - Grafana Admin:     ${GRAFANA_ADMIN_USER:-admin} / ${GRAFANA_ADMIN_PASSWORD:-admin}"
 echo ""

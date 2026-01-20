@@ -60,7 +60,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=auth@docker"
       # Basic Auth for Dashboard (无 Keycloak 时使用)
-      - "traefik.http.middlewares.auth.basicauth.users=admin:$$2y$$05$$UmaRrbY.W9w4wxb2YrR8SOMgmgMiy9cwAxY6ESQzdiMJVuUDy4cp6/"  # admin/echo $(htpasswd -nbB admin "你的强密码")注意转译
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s

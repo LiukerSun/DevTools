@@ -47,6 +47,18 @@ def test_detect_ipv4_all_fail(mock_get):
         detect_ipv4()
 
 
+def test_detect_ipv4_public_ip_env(monkeypatch):
+    monkeypatch.setenv("PUBLIC_IP", "203.0.113.99")
+    ip = detect_ipv4()
+    assert ip == "203.0.113.99"
+
+
+def test_detect_ipv4_public_ip_invalid(monkeypatch):
+    monkeypatch.setenv("PUBLIC_IP", "2001:db8::1")
+    with pytest.raises(ValueError, match="PUBLIC_IP is set"):
+        detect_ipv4()
+
+
 def test_setup_logging():
     logger = setup_logging("INFO")
     assert logger.level == 20  # INFO level

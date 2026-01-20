@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import requests
@@ -28,6 +29,12 @@ def detect_ipv4() -> str:
     自动检测服务器公网 IPv4 地址
     尝试多个服务以提高可靠性
     """
+    public_ip = os.getenv("PUBLIC_IP")
+    if public_ip:
+        if validate_ipv4(public_ip):
+            return public_ip
+        raise ValueError("PUBLIC_IP is set but not a valid IPv4 address")
+
     ip_services = [
         'https://api.ipify.org',
         'https://ifconfig.me/ip',
